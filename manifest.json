@@ -1,0 +1,52 @@
+{
+  "manifest_version": 3,
+  "name": "PinTrustCheck - 聘企查",
+  "version": "1.0.0",
+  "description": "在BOSS直聘页面选中公司名，自动查询企业预警通信息，显示公司成立日期、实缴资本、人员规模、参保人数等关键信息",
+  "permissions": [
+    "activeTab",
+    "storage",
+    "scripting"
+  ],
+  "host_permissions": [
+    "https://*.zhipin.com/*",
+    "https://*.qcc.com/*",
+    "https://*.qixin.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://*.zhipin.com/*",
+        "https://*.qcc.com/*",
+        "https://*.qixin.com/*"
+      ],
+      "js": ["content.js"],
+      "css": ["content.css"]
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "PinTrustCheck - 聘企查",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["icons/*"],
+      "matches": ["<all_urls>"]
+    }
+  ]
+} 

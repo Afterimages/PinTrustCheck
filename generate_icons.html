@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>生成图标</title>
+</head>
+<body>
+    <canvas id="canvas16" width="16" height="16"></canvas>
+    <canvas id="canvas32" width="32" height="32"></canvas>
+    <canvas id="canvas48" width="48" height="48"></canvas>
+    <canvas id="canvas128" width="128" height="128"></canvas>
+    
+    <script>
+        // 加载SVG图标
+        const svg = `
+        <svg width="128" height="128" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" style="stop-color:#667eea;stop-opacity:1" />
+              <stop offset="100%" style="stop-color:#764ba2;stop-opacity:1" />
+            </linearGradient>
+          </defs>
+          
+          <circle cx="64" cy="64" r="60" fill="url(#grad1)" stroke="#fff" stroke-width="4"/>
+          
+          <g fill="#fff" transform="translate(32, 32)">
+            <rect x="8" y="32" width="48" height="32" rx="2"/>
+            <rect x="16" y="40" width="8" height="8" rx="1"/>
+            <rect x="32" y="40" width="8" height="8" rx="1"/>
+            <rect x="16" y="52" width="8" height="8" rx="1"/>
+            <rect x="32" y="52" width="8" height="8" rx="1"/>
+            <rect x="24" y="56" width="8" height="8" rx="1"/>
+            <polygon points="8,32 32,16 56,32"/>
+            <line x1="32" y1="16" x2="32" y2="8" stroke="#fff" stroke-width="2"/>
+            <circle cx="32" cy="8" r="2" fill="#fff"/>
+          </g>
+          
+          <g transform="translate(70, 20)">
+            <circle cx="12" cy="12" r="8" fill="none" stroke="#fff" stroke-width="3"/>
+            <line x1="18" y1="18" x2="24" y2="24" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
+          </g>
+          
+          <text x="64" y="110" text-anchor="middle" fill="#fff" font-family="Arial, sans-serif" font-size="16" font-weight="bold">P</text>
+        </svg>`;
+
+        // 生成不同尺寸的图标
+        const sizes = [16, 32, 48, 128];
+        
+        sizes.forEach(size => {
+            const canvas = document.getElementById(`canvas${size}`);
+            const ctx = canvas.getContext('2d');
+            
+            // 创建图片对象
+            const img = new Image();
+            img.onload = function() {
+                ctx.drawImage(img, 0, 0, size, size);
+                
+                // 下载图标
+                const link = document.createElement('a');
+                link.download = `icon${size}.png`;
+                link.href = canvas.toDataURL();
+                link.click();
+            };
+            
+            // 将SVG转换为data URL
+            const svgBlob = new Blob([svg], {type: 'image/svg+xml'});
+            const url = URL.createObjectURL(svgBlob);
+            img.src = url;
+        });
+    </script>
+</body>
+</html> 
