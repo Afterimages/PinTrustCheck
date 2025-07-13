@@ -30,10 +30,29 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 });
 
+// 注册原生右键菜单
+chrome.runtime.onInstalled.addListener(() => {
+  chrome.contextMenus.create({
+    id: "pintrust-check-company",
+    title: "查询企业信息",
+    contexts: ["selection"], // 只在选中文本时显示
+    documentUrlPatterns: ["https://*.zhipin.com/*"]
+  });
+});
+
+chrome.contextMenus.onClicked.addListener((info, tab) => {
+  if (info.menuItemId === "pintrust-check-company") {
+    chrome.tabs.sendMessage(tab.id, {
+      action: "processCompanyInfo",
+      companyName: info.selectionText
+    });
+  }
+});
+
 // 检查企业预警通登录状态
 async function checkQccLoginStatus() {
   try {
-    const tabs = await chrome.tabs.query({ url: "https://*.qcc.com/*" });
+    const tabs = await chrome.tabs.query({ url: "https://*.qyyjt.cn/*" });
     if (tabs.length === 0) {
       return false;
     }
@@ -62,18 +81,18 @@ async function checkQccLoginStatus() {
 async function searchCompanyInfo(companyName) {
   try {
     // 检查是否已有企业预警通标签页
-    let tabs = await chrome.tabs.query({ url: "https://*.qcc.com/*" });
+    let tabs = await chrome.tabs.query({ url: "https://*.qyyjt.cn/*" });
     
     if (tabs.length === 0) {
       // 创建新的企业预警通标签页
       const newTab = await chrome.tabs.create({
-        url: `https://www.qcc.com/web/search?key=${encodeURIComponent(companyName)}`
+        url: `https://www.qyyjt.cn/search?key=${encodeURIComponent(companyName)}`
       });
       tabs = [newTab];
     } else {
       // 在现有标签页中搜索
       await chrome.tabs.update(tabs[0].id, {
-        url: `https://www.qcc.com/web/search?key=${encodeURIComponent(companyName)}`
+        url: `https://www.qyyjt.cn/search?key=${encodeURIComponent(companyName)}`
       });
     }
     
@@ -87,7 +106,7 @@ async function searchCompanyInfo(companyName) {
 // 提取公司数据
 async function extractCompanyData() {
   try {
-    const tabs = await chrome.tabs.query({ url: "https://*.qcc.com/*" });
+    const tabs = await chrome.tabs.query({ url: "https://*.qyyjt.cn/*" });
     if (tabs.length === 0) {
       return { success: false, error: '未找到企业预警通页面' };
     }

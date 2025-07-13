@@ -100,6 +100,13 @@ window.pintrustCopyCompany = function(companyName) {
   });
 };
 
+// 监听来自background.js的消息
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  if (request.action === "processCompanyInfo" && request.companyName) {
+    processCompanyInfo(request.companyName);
+  }
+});
+
 // 处理公司信息查询
 async function processCompanyInfo(companyName) {
   if (isProcessing) {

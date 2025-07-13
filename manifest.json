@@ -4,14 +4,14 @@
   "version": "1.0.0",
   "description": "在BOSS直聘页面选中公司名，自动查询企业预警通信息，显示公司成立日期、实缴资本、人员规模、参保人数等关键信息",
   "permissions": [
+    "contextMenus",
     "activeTab",
     "storage",
     "scripting"
   ],
   "host_permissions": [
     "https://*.zhipin.com/*",
-    "https://*.qcc.com/*",
-    "https://*.qixin.com/*"
+    "https://*.qyyjt.cn/*"
   ],
   "background": {
     "service_worker": "background.js"
@@ -20,8 +20,7 @@
     {
       "matches": [
         "https://*.zhipin.com/*",
-        "https://*.qcc.com/*",
-        "https://*.qixin.com/*"
+        "https://*.qyyjt.cn/*"
       ],
       "js": ["content.js"],
       "css": ["content.css"]
