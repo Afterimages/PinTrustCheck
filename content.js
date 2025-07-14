@@ -124,7 +124,7 @@ async function processCompanyInfo(companyName) {
     
     if (!loginResponse.isLoggedIn) {
       showNotification('请先登录企业预警通', 'warning');
-      window.open('https://www.qcc.com/web/login', '_blank');
+      window.open('https://www.qyyjt.cn/user/login', '_blank');
       isProcessing = false;
       return;
     }

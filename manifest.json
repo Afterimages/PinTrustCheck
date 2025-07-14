@@ -20,7 +20,7 @@
     {
       "matches": [
         "https://*.zhipin.com/*",
-        "https://*.qyyjt.cn/*"
+        "https://www.zhipin.com/*"
       ],
       "js": ["content.js"],
       "css": ["content.css"]
