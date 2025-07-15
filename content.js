@@ -115,6 +115,7 @@ async function processCompanyInfo(companyName) {
   }
   
   isProcessing = true;
+  const startTime = Date.now(); // 计时开始
   showNotification('正在检查登录状态...', 'info');
   
   try {
@@ -149,24 +150,29 @@ async function processCompanyInfo(companyName) {
         action: 'extractCompanyData'
       });
       
+      const endTime = Date.now(); // 计时结束
+      const duration = ((endTime - startTime) / 1000).toFixed(2);
+      
       if (dataResponse.success) {
-        showCompanyInfo(dataResponse.data, companyName);
+        showCompanyInfo(dataResponse.data, companyName, duration);
       } else {
-        showNotification('数据提取失败: ' + dataResponse.error, 'error');
+        showNotification('数据提取失败: ' + dataResponse.error + `（耗时${duration}秒）`, 'error');
       }
       
       isProcessing = false;
-    }, 2000);
+    }, 1200);
     
   } catch (error) {
+    const endTime = Date.now();
+    const duration = ((endTime - startTime) / 1000).toFixed(2);
     console.error('处理公司信息失败:', error);
-    showNotification('处理失败: ' + error.message, 'error');
+    showNotification('处理失败: ' + error.message + `（耗时${duration}秒）`, 'error');
     isProcessing = false;
   }
 }
 
 // 显示公司信息浮窗
-function showCompanyInfo(companyData, originalName) {
+function showCompanyInfo(companyData, originalName, duration) {
   if (floatingWindow) {
     floatingWindow.remove();
   }
@@ -204,6 +210,7 @@ function showCompanyInfo(companyData, originalName) {
       <div class="disclaimer">
         <small>⚠️ 免责声明：本插件仅在用户登录授权后运行，信息展示仅作参考</small>
       </div>
+      <div style="margin-top:8px;text-align:right;color:#888;font-size:12px;">本次查询耗时：${duration}秒</div>
     </div>
   `;
   

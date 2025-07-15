@@ -200,44 +200,50 @@ async function extractCompanyData() {
     const result = await chrome.scripting.executeScript({
       target: { tabId: tabs[0].id },
       func: () => {
-        // 只提取成立日期、实缴资本、企业规模、参保人数
+        // 智能等待员工人数元素出现再抓取，最多等5秒
         function getTextByLabel(label) {
-          const li = Array.from(document.querySelectorAll('li')).find(li => li.querySelector('.label') && li.querySelector('.label').innerText.replace(/\s|：/g, '') === label);
-          if (!li) return '';
-          // 兼容不同结构
-          const ellipse = li.querySelector('.ellipse');
-          if (ellipse) return ellipse.innerText.trim();
-          const labelContent = li.querySelector('.labelContent');
-          if (labelContent) return labelContent.innerText.trim();
-          const copyVal = li.querySelector('.copy-val');
-          if (copyVal) return copyVal.innerText.trim();
-          const text = li.querySelector('.text');
-          if (text) return text.innerText.trim();
-          // 直接li下span
-          const span = li.querySelector('span:not(.label)');
-          if (span) return span.innerText.trim();
-          return li.innerText.replace(/^.*?：/, '').trim();
+          const start = Date.now();
+          return new Promise(resolve => {
+            function tryFind() {
+              const li = Array.from(document.querySelectorAll('li')).find(li => li.querySelector('.label') && li.querySelector('.label').innerText.replace(/\s|：/g, '') === label);
+              if (li) {
+                // 兼容不同结构
+                const ellipse = li.querySelector('.ellipse');
+                if (ellipse) return resolve(ellipse.innerText.trim());
+                const labelContent = li.querySelector('.labelContent');
+                if (labelContent) return resolve(labelContent.innerText.trim());
+                const copyVal = li.querySelector('.copy-val');
+                if (copyVal) return resolve(copyVal.innerText.trim());
+                const text = li.querySelector('.text');
+                if (text) return resolve(text.innerText.trim());
+                // 直接li下span
+                const span = li.querySelector('span:not(.label)');
+                if (span) return resolve(span.innerText.trim());
+                return resolve(li.innerText.replace(/^.*?：/, '').trim());
+              }
+              if (Date.now() - start > 5000) return resolve(''); // 最多等5秒
+              setTimeout(tryFind, 100);
+            }
+            tryFind();
+          });
         }
-        // 成立日期
-        const establishDate = getTextByLabel('成立日期');
-        // 实缴资本
-        let paidCapital = getTextByLabel('实缴资本');
-        // 企业规模
-        let staffSize = getTextByLabel('企业规模');
-        // 参保人数/员工人数
-        let insuranceCount = getTextByLabel('员工人数');
-        if (!insuranceCount) {
-          // 有些页面叫参保人数
-          insuranceCount = getTextByLabel('参保人数');
-        }
-        return {
+        // 用Promise.all并行提取
+        return Promise.all([
+          getTextByLabel('成立日期'),
+          getTextByLabel('实缴资本'),
+          getTextByLabel('企业规模'),
+          getTextByLabel('员工人数').then(val => val || getTextByLabel('参保人数'))
+        ]).then(([establishDate, paidCapital, staffSize, insuranceCount]) => ({
           establishDate,
           paidCapital,
           staffSize,
           insuranceCount
-        };
-      }
+        }));
+      },
+      // 需要指定返回Promise
+      world: 'MAIN'
     });
+    // 由于脚本返回Promise，需取result[0].result
     return { success: true, data: result[0].result };
   } catch (error) {
     console.error('[PinTrustCheck] 提取公司数据失败:', error, error && error.stack);
