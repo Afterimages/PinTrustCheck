@@ -75,7 +75,7 @@ async function checkQccLoginStatus() {
 async function searchCompanyInfo(companyName) {
   try {
     console.log('[PinTrustCheck] 开始搜索公司:', companyName);
-    // 1. 跳转到企业预警通首页
+    // 1. 跳转到企业预警通首页或判断是否已在详情页
     let tabs = await chrome.tabs.query({ url: "https://*.qyyjt.cn/*" });
     let tabId;
     if (tabs.length === 0) {
@@ -83,13 +83,19 @@ async function searchCompanyInfo(companyName) {
       tabId = newTab.id;
       console.log('[PinTrustCheck] 新建标签页:', tabId);
     } else {
-      await chrome.tabs.update(tabs[0].id, { url: "https://www.qyyjt.cn/" });
       tabId = tabs[0].id;
+      // 判断是否已在公司详情页（简单判断URL包含/company/或/detail/等）
+      const tab = tabs[0];
+      if (tab.url && /\/company\/|\/detail\//.test(tab.url)) {
+        console.log('[PinTrustCheck] 已在公司详情页，直接提取数据');
+        return { success: true, tabId, alreadyInDetail: true };
+      }
+      await chrome.tabs.update(tabId, { url: "https://www.qyyjt.cn/" });
       console.log('[PinTrustCheck] 复用已有标签页:', tabId);
     }
 
-    // 2. 等待首页加载
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    // 2. 等待首页加载（缩短为1.2秒）
+    await new Promise(resolve => setTimeout(resolve, 1200));
     console.log('[PinTrustCheck] 首页加载完毕，准备注入搜索脚本');
 
     // 3. 注入脚本：兼容所有placeholder含公司和关键字的搜索框
@@ -98,89 +104,46 @@ async function searchCompanyInfo(companyName) {
       func: (companyName) => {
         function setNativeValue(element, value) {
           const lastValue = element.value;
-          console.log('[PinTrustCheck] setNativeValue: lastValue=', lastValue, 'newValue=', value);
           element.value = value;
           const event = new Event('input', { bubbles: true });
           const tracker = element._valueTracker;
-          console.log('[PinTrustCheck] setNativeValue: tracker=', tracker);
-          if (tracker) {
-            tracker.setValue(lastValue);
-            console.log('[PinTrustCheck] setNativeValue: tracker.setValue done');
-          }
+          if (tracker) tracker.setValue(lastValue);
           element.dispatchEvent(event);
-          console.log('[PinTrustCheck] setNativeValue: dispatched input event', event);
         }
         try {
-          console.log('[PinTrustCheck] 注入脚本：setNativeValue输入');
-          // 选择placeholder包含公司和关键字的input.ant-input[type=text]
           const input = Array.from(document.querySelectorAll('input.ant-input[type="text"]')).find(i => i.placeholder && i.placeholder.includes('公司') && i.placeholder.includes('关键字'));
-          console.log('[PinTrustCheck] input元素:', input);
-          if (!input) {
-            console.log('[PinTrustCheck] 未找到公司搜索框');
-            return;
-          }
+          if (!input) return;
           input.removeAttribute('readonly');
           input.focus();
           input.click();
           setNativeValue(input, companyName);
           input.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: companyName[companyName.length-1] }));
           input.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true, key: companyName[companyName.length-1] }));
-          console.log('[PinTrustCheck] setNativeValue已填充:', input.value);
-          setTimeout(() => {
-            try {
-              const autoBox = document.querySelector('.securities__SecuritiesBox-fiIjFR');
-              console.log('[PinTrustCheck] 补全列表容器:', autoBox);
-              if (autoBox) {
-                const items = autoBox.querySelectorAll('.securities-search-item');
-                console.log('[PinTrustCheck] 补全项数量:', items.length, items);
-              }
-            } catch (e) {
-              console.error('[PinTrustCheck] setTimeout补全列表异常:', e);
-            }
-          }, 800);
-        } catch (e) {
-          console.error('[PinTrustCheck] setNativeValue输入异常:', e);
-        }
+        } catch (e) {}
       },
       args: [companyName]
     });
 
-    // 4. 等待补全列表出现
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    // 4. 等待补全列表出现（缩短为0.8秒）
+    await new Promise(resolve => setTimeout(resolve, 800));
     console.log('[PinTrustCheck] 等待补全列表出现，准备点击第一个补全项');
 
-    // 5. 注入脚本：点击第一个补全项，并打印所有补全项，详细异常日志
+    // 5. 注入脚本：点击第一个补全项
     await chrome.scripting.executeScript({
       target: { tabId },
       func: () => {
-        try {
-          console.log('[PinTrustCheck] 注入脚本：点击第一个补全项');
-          const autoBox = document.querySelector('.securities__SecuritiesBox-fiIjFR');
-          console.log('[PinTrustCheck] 补全列表容器:', autoBox);
-          if (autoBox) {
-            const items = autoBox.querySelectorAll('.securities-search-item');
-            console.log('[PinTrustCheck] 补全项数量:', items.length, items);
-            if (items.length > 0) {
-              try {
-                items[0].click();
-                console.log('[PinTrustCheck] 已点击第一个补全项');
-              } catch (e) {
-                console.error('[PinTrustCheck] 点击补全项异常:', e);
-              }
-            } else {
-              console.log('[PinTrustCheck] 没有补全项可点');
-            }
-          } else {
-            console.log('[PinTrustCheck] 没有补全列表容器');
+        const autoBox = document.querySelector('.securities__SecuritiesBox-fiIjFR');
+        if (autoBox) {
+          const items = autoBox.querySelectorAll('.securities-search-item');
+          if (items.length > 0) {
+            try { items[0].click(); } catch (e) {}
           }
-        } catch (e) {
-          console.error('[PinTrustCheck] 点击补全项主流程异常:', e);
         }
       }
     });
 
-    // 6. 等待页面跳转到详情页
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    // 6. 跳转后不死等2秒，直接监听详情页关键元素出现
+    // 这里不再等待，直接返回，extractCompanyData会智能监听
     console.log('[PinTrustCheck] 操作完成，等待详情页加载');
 
     return { success: true, tabId };
