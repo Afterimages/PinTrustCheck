@@ -188,25 +188,17 @@ function showCompanyInfo(companyData, originalName) {
           <span class="info-label">成立日期:</span>
           <span class="info-value">${companyData.establishDate}</span>
         </div>` : ''}
-        ${companyData.regCapital ? `<div class="info-item">
-          <span class="info-label">注册资本:</span>
-          <span class="info-value">${companyData.regCapital}</span>
-        </div>` : ''}
         ${companyData.paidCapital ? `<div class="info-item">
           <span class="info-label">实缴资本:</span>
           <span class="info-value">${companyData.paidCapital}</span>
         </div>` : ''}
+        <div class="info-item">
+          <span class="info-label">员工人数:</span>
+          <span class="info-value">${companyData.insuranceCount ? companyData.insuranceCount : '--'}</span>
+        </div>
         ${companyData.staffSize ? `<div class="info-item">
-          <span class="info-label">人员规模:</span>
+          <span class="info-label">企业规模:</span>
           <span class="info-value">${companyData.staffSize}</span>
-        </div>` : ''}
-        ${companyData.insuranceCount ? `<div class="info-item">
-          <span class="info-label">参保人数:</span>
-          <span class="info-value">${companyData.insuranceCount}</span>
-        </div>` : ''}
-        ${companyData.businessStatus ? `<div class="info-item">
-          <span class="info-label">经营状态:</span>
-          <span class="info-value">${companyData.businessStatus}</span>
         </div>` : ''}
       </div>
       <div class="disclaimer">

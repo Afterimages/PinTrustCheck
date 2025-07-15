@@ -110,29 +110,37 @@ async function searchCompanyInfo(companyName) {
           element.dispatchEvent(event);
           console.log('[PinTrustCheck] setNativeValue: dispatched input event', event);
         }
-        console.log('[PinTrustCheck] 注入脚本：setNativeValue输入');
-        // 选择placeholder包含公司和关键字的input.ant-input[type=text]
-        const input = Array.from(document.querySelectorAll('input.ant-input[type="text"]')).find(i => i.placeholder && i.placeholder.includes('公司') && i.placeholder.includes('关键字'));
-        console.log('[PinTrustCheck] input元素:', input);
-        if (!input) {
-          console.log('[PinTrustCheck] 未找到公司搜索框');
-          return;
-        }
-        input.removeAttribute('readonly');
-        input.focus();
-        input.click();
-        setNativeValue(input, companyName);
-        input.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: companyName[companyName.length-1] }));
-        input.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true, key: companyName[companyName.length-1] }));
-        console.log('[PinTrustCheck] setNativeValue已填充:', input.value);
-        setTimeout(() => {
-          const autoBox = document.querySelector('.securities__SecuritiesBox-fiIjFR');
-          console.log('[PinTrustCheck] 补全列表容器:', autoBox);
-          if (autoBox) {
-            const items = autoBox.querySelectorAll('.securities-search-item');
-            console.log('[PinTrustCheck] 补全项数量:', items.length, items);
+        try {
+          console.log('[PinTrustCheck] 注入脚本：setNativeValue输入');
+          // 选择placeholder包含公司和关键字的input.ant-input[type=text]
+          const input = Array.from(document.querySelectorAll('input.ant-input[type="text"]')).find(i => i.placeholder && i.placeholder.includes('公司') && i.placeholder.includes('关键字'));
+          console.log('[PinTrustCheck] input元素:', input);
+          if (!input) {
+            console.log('[PinTrustCheck] 未找到公司搜索框');
+            return;
           }
-        }, 800);
+          input.removeAttribute('readonly');
+          input.focus();
+          input.click();
+          setNativeValue(input, companyName);
+          input.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: companyName[companyName.length-1] }));
+          input.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true, key: companyName[companyName.length-1] }));
+          console.log('[PinTrustCheck] setNativeValue已填充:', input.value);
+          setTimeout(() => {
+            try {
+              const autoBox = document.querySelector('.securities__SecuritiesBox-fiIjFR');
+              console.log('[PinTrustCheck] 补全列表容器:', autoBox);
+              if (autoBox) {
+                const items = autoBox.querySelectorAll('.securities-search-item');
+                console.log('[PinTrustCheck] 补全项数量:', items.length, items);
+              }
+            } catch (e) {
+              console.error('[PinTrustCheck] setTimeout补全列表异常:', e);
+            }
+          }, 800);
+        } catch (e) {
+          console.error('[PinTrustCheck] setNativeValue输入异常:', e);
+        }
       },
       args: [companyName]
     });
@@ -141,24 +149,32 @@ async function searchCompanyInfo(companyName) {
     await new Promise(resolve => setTimeout(resolve, 1500));
     console.log('[PinTrustCheck] 等待补全列表出现，准备点击第一个补全项');
 
-    // 5. 注入脚本：点击第一个补全项，并打印所有补全项
+    // 5. 注入脚本：点击第一个补全项，并打印所有补全项，详细异常日志
     await chrome.scripting.executeScript({
       target: { tabId },
       func: () => {
-        console.log('[PinTrustCheck] 注入脚本：点击第一个补全项');
-        const autoBox = document.querySelector('.securities__SecuritiesBox-fiIjFR');
-        console.log('[PinTrustCheck] 补全列表容器:', autoBox);
-        if (autoBox) {
-          const items = autoBox.querySelectorAll('.securities-search-item');
-          console.log('[PinTrustCheck] 补全项数量:', items.length, items);
-          if (items.length > 0) {
-            items[0].click();
-            console.log('[PinTrustCheck] 已点击第一个补全项');
+        try {
+          console.log('[PinTrustCheck] 注入脚本：点击第一个补全项');
+          const autoBox = document.querySelector('.securities__SecuritiesBox-fiIjFR');
+          console.log('[PinTrustCheck] 补全列表容器:', autoBox);
+          if (autoBox) {
+            const items = autoBox.querySelectorAll('.securities-search-item');
+            console.log('[PinTrustCheck] 补全项数量:', items.length, items);
+            if (items.length > 0) {
+              try {
+                items[0].click();
+                console.log('[PinTrustCheck] 已点击第一个补全项');
+              } catch (e) {
+                console.error('[PinTrustCheck] 点击补全项异常:', e);
+              }
+            } else {
+              console.log('[PinTrustCheck] 没有补全项可点');
+            }
           } else {
-            console.log('[PinTrustCheck] 没有补全项可点');
+            console.log('[PinTrustCheck] 没有补全列表容器');
           }
-        } else {
-          console.log('[PinTrustCheck] 没有补全列表容器');
+        } catch (e) {
+          console.error('[PinTrustCheck] 点击补全项主流程异常:', e);
         }
       }
     });
@@ -169,7 +185,7 @@ async function searchCompanyInfo(companyName) {
 
     return { success: true, tabId };
   } catch (error) {
-    console.error('[PinTrustCheck] 搜索公司失败:', error);
+    console.error('[PinTrustCheck] 搜索公司失败:', error, error && error.stack);
     return { success: false, error: error.message };
   }
 }
@@ -181,62 +197,50 @@ async function extractCompanyData() {
     if (tabs.length === 0) {
       return { success: false, error: '未找到企业预警通页面' };
     }
-    
     const result = await chrome.scripting.executeScript({
       target: { tabId: tabs[0].id },
       func: () => {
-        // 提取公司基本信息
-        const companyData = {};
-        
-        // 公司名称
-        const nameElement = document.querySelector('.company-name, .title, h1');
-        if (nameElement) {
-          companyData.name = nameElement.textContent.trim();
+        // 只提取成立日期、实缴资本、企业规模、参保人数
+        function getTextByLabel(label) {
+          const li = Array.from(document.querySelectorAll('li')).find(li => li.querySelector('.label') && li.querySelector('.label').innerText.replace(/\s|：/g, '') === label);
+          if (!li) return '';
+          // 兼容不同结构
+          const ellipse = li.querySelector('.ellipse');
+          if (ellipse) return ellipse.innerText.trim();
+          const labelContent = li.querySelector('.labelContent');
+          if (labelContent) return labelContent.innerText.trim();
+          const copyVal = li.querySelector('.copy-val');
+          if (copyVal) return copyVal.innerText.trim();
+          const text = li.querySelector('.text');
+          if (text) return text.innerText.trim();
+          // 直接li下span
+          const span = li.querySelector('span:not(.label)');
+          if (span) return span.innerText.trim();
+          return li.innerText.replace(/^.*?：/, '').trim();
         }
-        
         // 成立日期
-        const establishElement = document.querySelector('[data-key="成立日期"], .establish-date, .reg-date');
-        if (establishElement) {
-          companyData.establishDate = establishElement.textContent.trim();
-        }
-        
+        const establishDate = getTextByLabel('成立日期');
         // 实缴资本
-        const capitalElement = document.querySelector('[data-key="实缴资本"], .paid-capital, .capital');
-        if (capitalElement) {
-          companyData.paidCapital = capitalElement.textContent.trim();
+        let paidCapital = getTextByLabel('实缴资本');
+        // 企业规模
+        let staffSize = getTextByLabel('企业规模');
+        // 参保人数/员工人数
+        let insuranceCount = getTextByLabel('员工人数');
+        if (!insuranceCount) {
+          // 有些页面叫参保人数
+          insuranceCount = getTextByLabel('参保人数');
         }
-        
-        // 人员规模
-        const staffElement = document.querySelector('[data-key="人员规模"], .staff-size, .employee-count');
-        if (staffElement) {
-          companyData.staffSize = staffElement.textContent.trim();
-        }
-        
-        // 参保人数
-        const insuranceElement = document.querySelector('[data-key="参保人数"], .insurance-count, .social-insurance');
-        if (insuranceElement) {
-          companyData.insuranceCount = insuranceElement.textContent.trim();
-        }
-        
-        // 注册资本
-        const regCapitalElement = document.querySelector('[data-key="注册资本"], .reg-capital');
-        if (regCapitalElement) {
-          companyData.regCapital = regCapitalElement.textContent.trim();
-        }
-        
-        // 经营状态
-        const statusElement = document.querySelector('[data-key="经营状态"], .business-status, .status');
-        if (statusElement) {
-          companyData.businessStatus = statusElement.textContent.trim();
-        }
-        
-        return companyData;
+        return {
+          establishDate,
+          paidCapital,
+          staffSize,
+          insuranceCount
+        };
       }
     });
-    
     return { success: true, data: result[0].result };
   } catch (error) {
-    console.error('提取公司数据失败:', error);
+    console.error('[PinTrustCheck] 提取公司数据失败:', error, error && error.stack);
     return { success: false, error: error.message };
   }
 } 
