@@ -75,7 +75,7 @@ async function checkQccLoginStatus() {
 async function searchCompanyInfo(companyName) {
   try {
     console.log('[PinTrustCheck] 开始搜索公司:', companyName);
-    // 1. 跳转到企业预警通首页或判断是否已在详情页
+    // 1. 跳转到企业预警通首页或已有tab
     let tabs = await chrome.tabs.query({ url: "https://*.qyyjt.cn/*" });
     let tabId;
     if (tabs.length === 0) {
@@ -83,19 +83,13 @@ async function searchCompanyInfo(companyName) {
       tabId = newTab.id;
       console.log('[PinTrustCheck] 新建标签页:', tabId);
     } else {
+      await chrome.tabs.update(tabs[0].id, { url: "https://www.qyyjt.cn/" });
       tabId = tabs[0].id;
-      // 判断是否已在公司详情页（简单判断URL包含/company/或/detail/等）
-      const tab = tabs[0];
-      if (tab.url && /\/company\/|\/detail\//.test(tab.url)) {
-        console.log('[PinTrustCheck] 已在公司详情页，直接提取数据');
-        return { success: true, tabId, alreadyInDetail: true };
-      }
-      await chrome.tabs.update(tabId, { url: "https://www.qyyjt.cn/" });
       console.log('[PinTrustCheck] 复用已有标签页:', tabId);
     }
 
-    // 2. 等待首页加载（缩短为1.2秒）
-    await new Promise(resolve => setTimeout(resolve, 1200));
+    // 2. 等待首页加载
+    await new Promise(resolve => setTimeout(resolve, 2000));
     console.log('[PinTrustCheck] 首页加载完毕，准备注入搜索脚本');
 
     // 3. 注入脚本：兼容所有placeholder含公司和关键字的搜索框
@@ -107,43 +101,60 @@ async function searchCompanyInfo(companyName) {
           element.value = value;
           const event = new Event('input', { bubbles: true });
           const tracker = element._valueTracker;
-          if (tracker) tracker.setValue(lastValue);
+          if (tracker) {
+            tracker.setValue(lastValue);
+          }
           element.dispatchEvent(event);
         }
         try {
+          // 选择placeholder包含公司和关键字的input.ant-input[type=text]
           const input = Array.from(document.querySelectorAll('input.ant-input[type="text"]')).find(i => i.placeholder && i.placeholder.includes('公司') && i.placeholder.includes('关键字'));
-          if (!input) return;
+          if (!input) {
+            return;
+          }
           input.removeAttribute('readonly');
           input.focus();
           input.click();
           setNativeValue(input, companyName);
           input.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: companyName[companyName.length-1] }));
           input.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true, key: companyName[companyName.length-1] }));
+          setTimeout(() => {
+            try {
+              const autoBox = document.querySelector('.securities__SecuritiesBox-fiIjFR');
+              if (autoBox) {
+                const items = autoBox.querySelectorAll('.securities-search-item');
+              }
+            } catch (e) {}
+          }, 800);
         } catch (e) {}
       },
       args: [companyName]
     });
 
-    // 4. 等待补全列表出现（缩短为0.8秒）
-    await new Promise(resolve => setTimeout(resolve, 800));
+    // 4. 等待补全列表出现
+    await new Promise(resolve => setTimeout(resolve, 1500));
     console.log('[PinTrustCheck] 等待补全列表出现，准备点击第一个补全项');
 
     // 5. 注入脚本：点击第一个补全项
     await chrome.scripting.executeScript({
       target: { tabId },
       func: () => {
-        const autoBox = document.querySelector('.securities__SecuritiesBox-fiIjFR');
-        if (autoBox) {
-          const items = autoBox.querySelectorAll('.securities-search-item');
-          if (items.length > 0) {
-            try { items[0].click(); } catch (e) {}
+        try {
+          const autoBox = document.querySelector('.securities__SecuritiesBox-fiIjFR');
+          if (autoBox) {
+            const items = autoBox.querySelectorAll('.securities-search-item');
+            if (items.length > 0) {
+              try {
+                items[0].click();
+              } catch (e) {}
+            }
           }
-        }
+        } catch (e) {}
       }
     });
 
-    // 6. 跳转后不死等2秒，直接监听详情页关键元素出现
-    // 这里不再等待，直接返回，extractCompanyData会智能监听
+    // 6. 等待页面跳转到详情页
+    await new Promise(resolve => setTimeout(resolve, 2000));
     console.log('[PinTrustCheck] 操作完成，等待详情页加载');
 
     return { success: true, tabId };
