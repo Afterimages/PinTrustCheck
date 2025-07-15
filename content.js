@@ -177,10 +177,10 @@ function showCompanyInfo(companyData, originalName, duration) {
     floatingWindow.remove();
   }
   
-  const window = document.createElement('div');
-  window.className = 'pintrust-floating-window';
-  window.innerHTML = `
-    <div class="window-header">
+  const windowDiv = document.createElement('div');
+  windowDiv.className = 'pintrust-floating-window';
+  windowDiv.innerHTML = `
+    <div class="window-header" style="cursor: move;">
       <div class="window-title">
         <span class="title-icon">🏢</span>
         企业信息查询结果
@@ -214,18 +214,58 @@ function showCompanyInfo(companyData, originalName, duration) {
     </div>
   `;
   
-  const mouseX = window.event ? window.event.clientX : 100;
-  const mouseY = window.event ? window.event.clientY : 100;
-  
-  window.style.left = Math.min(mouseX, window.innerWidth - 400) + 'px';
-  window.style.top = Math.min(mouseY, window.innerHeight - 300) + 'px';
-  
-  document.body.appendChild(window);
-  floatingWindow = window;
-  
+  // 初始位置，靠近屏幕右侧
+  const windowWidth = 400;
+  const windowHeight = 300;
+  const margin = 32;
+  windowDiv.style.left = (window.innerWidth - windowWidth - margin) + 'px';
+  windowDiv.style.top = margin + 'px';
+  windowDiv.style.position = 'fixed';
+  windowDiv.style.transform = 'none'; // 禁用原有transform，方便拖拽
+
+  document.body.appendChild(windowDiv);
+  floatingWindow = windowDiv;
+
+  // 拖拽逻辑
+  const header = windowDiv.querySelector('.window-header');
+  let isDragging = false;
+  let offsetX = 0;
+  let offsetY = 0;
+
+  header.addEventListener('mousedown', function(e) {
+    isDragging = true;
+    // 鼠标点到浮窗左上角的偏移
+    const rect = windowDiv.getBoundingClientRect();
+    offsetX = e.clientX - rect.left;
+    offsetY = e.clientY - rect.top;
+    document.body.style.userSelect = 'none';
+  });
+
+  document.addEventListener('mousemove', onDragMove);
+  document.addEventListener('mouseup', onDragEnd);
+
+  function onDragMove(e) {
+    if (!isDragging) return;
+    let newLeft = e.clientX - offsetX;
+    let newTop = e.clientY - offsetY;
+    // 限制浮窗不超出窗口
+    newLeft = Math.max(0, Math.min(newLeft, window.innerWidth - windowDiv.offsetWidth));
+    newTop = Math.max(0, Math.min(newTop, window.innerHeight - windowDiv.offsetHeight));
+    windowDiv.style.left = newLeft + 'px';
+    windowDiv.style.top = newTop + 'px';
+  }
+
+  function onDragEnd() {
+    if (isDragging) {
+      isDragging = false;
+      document.body.style.userSelect = '';
+    }
+  }
+
+  // 自动关闭逻辑
   setTimeout(() => {
-    if (window.parentNode) {
-      window.remove();
+    if (windowDiv.parentNode) {
+      windowDiv.remove();
     }
   }, 30000);
 }
