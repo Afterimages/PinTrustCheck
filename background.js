@@ -227,18 +227,33 @@ async function extractCompanyData() {
             tryFind();
           });
         }
-        // 用Promise.all并行提取
-        return Promise.all([
-          getTextByLabel('成立日期'),
-          getTextByLabel('实缴资本'),
-          getTextByLabel('企业规模'),
-          getTextByLabel('员工人数').then(val => val || getTextByLabel('参保人数'))
-        ]).then(([establishDate, paidCapital, staffSize, insuranceCount]) => ({
-          establishDate,
-          paidCapital,
-          staffSize,
-          insuranceCount
-        }));
+         // 智能等待公司名称出现
+         function getCompanyName() {
+           const start = Date.now();
+           return new Promise(resolve => {
+             function tryFind() {
+               const nameEl = document.querySelector('.titleWrapper .name.copy-val');
+               if (nameEl) return resolve(nameEl.innerText.trim());
+               if (Date.now() - start > 5000) return resolve('');
+               setTimeout(tryFind, 100);
+             }
+             tryFind();
+           });
+         }
+         // 用Promise.all并行提取
+         return Promise.all([
+           getCompanyName(),
+           getTextByLabel('成立日期'),
+           getTextByLabel('实缴资本'),
+           getTextByLabel('企业规模'),
+           getTextByLabel('员工人数').then(val => val || getTextByLabel('参保人数'))
+         ]).then(([name, establishDate, paidCapital, staffSize, insuranceCount]) => ({
+           name,
+           establishDate,
+           paidCapital,
+           staffSize,
+           insuranceCount
+         }));
       },
       // 需要指定返回Promise
       world: 'MAIN'
