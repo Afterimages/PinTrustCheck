@@ -12,7 +12,8 @@ document.addEventListener('DOMContentLoaded', () => {
 function initializePlugin() {
   addContextMenu();
   document.addEventListener('mouseup', handleTextSelection);
-  document.addEventListener('keydown', handleKeyboardEvents);
+  // 移除快捷键监听
+  // document.addEventListener('keydown', handleKeyboardEvents);
   console.log('PinTrustCheck 内容脚本已加载');
 }
 
@@ -24,17 +25,17 @@ function handleTextSelection(event) {
   }
 }
 
-// 处理键盘事件
-function handleKeyboardEvents(event) {
-  if (event.ctrlKey && event.shiftKey && event.key === 'P') {
-    event.preventDefault();
-    if (selectedText) {
-      processCompanyInfo(selectedText);
-    } else {
-      showNotification('请先选中公司名称', 'warning');
-    }
-  }
-}
+// 移除快捷键相关函数
+// function handleKeyboardEvents(event) {
+//   if (event.ctrlKey && event.shiftKey && event.key === 'P') {
+//     event.preventDefault();
+//     if (selectedText) {
+//       processCompanyInfo(selectedText);
+//     } else {
+//       showNotification('请先选中公司名称', 'warning');
+//     }
+//   }
+// }
 
 // 添加右键菜单
 function addContextMenu() {
